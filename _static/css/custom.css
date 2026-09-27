@@ -1,0 +1,975 @@
+/* ==========================================================================
+   Custom theme layer on top of the stock `sphinx-rtd-theme`: accent colour,
+   a readable content column, task / solution blocks and a light/dark toggle.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. Design tokens
+   -------------------------------------------------------------------------- */
+
+:root {
+  /* Mint green accent, used for decorative text, borders and
+     hover states -- never as a background with white text on it (too light
+     for that at AA contrast; see --lrcc-accent-solid below). */
+  --lrcc-accent: #00b1ac;
+  --lrcc-accent-dark: #00615d;
+  --lrcc-accent-soft: #e3f7f6;
+
+  /* A solid, WCAG AA-safe variant of the accent, specifically for white text
+     on a colored background (the CTA button, the sidebar search bar, the
+     "current page" sidebar highlight, admonition title bars). Keep every
+     new banner-style background on this token, or on --lrcc-note /
+     --lrcc-tip / --lrcc-warning / --lrcc-danger / --lrcc-review below, all
+     of which are calibrated the same way -- never on --lrcc-accent itself. */
+  --lrcc-accent-solid: #007a76;
+  --lrcc-accent-solid-hover: #005f5c;
+
+  --lrcc-sidebar-bg: #26343a;
+  --lrcc-sidebar-bg-deep: #1d282d;
+  --lrcc-sidebar-fg: #d9e2e6;
+
+  --lrcc-body-bg: #ffffff;
+  --lrcc-wrap-bg: #fcfcfc;
+  --lrcc-text: #303030;
+  --lrcc-text-muted: #5f6b70;
+  --lrcc-border: #e1e4e5;
+  --lrcc-code-bg: #f6f8f8;
+  --lrcc-code-fg: #b1003e;
+
+  /* Admonition banner colors. Each is calibrated so that the bold white
+     title text inside it clears WCAG AA (>= 4.5:1) -- these are NOT the
+     original pastel colors, which failed as low as 1.8:1 for white text.
+     They are intentionally the same in light and dark mode: a banner's own
+     background does not depend on the page theme, only the page's other
+     surfaces do. */
+  --lrcc-note: #2c6690;
+  --lrcc-tip: #0e7d6b;
+  --lrcc-warning: #9a5b0f;
+  --lrcc-danger: #b23a30;
+  --lrcc-task: var(--lrcc-accent-solid);
+  --lrcc-review: #7a3f9e;
+
+  --lrcc-radius: 4px;
+}
+
+/* Dark mode. Activated by _static/js/theme.js, which sets
+   `data-theme="dark"` on <html> and remembers the choice in localStorage. */
+:root[data-theme="dark"] {
+  --lrcc-accent: #2ed3ce;
+  --lrcc-accent-dark: #24a9a5;
+  --lrcc-accent-soft: #14312f;
+
+  /* Dark mode needs its own solid/white-text-safe pair: the bright cyan
+     --lrcc-accent above (great as text against a dark page) drops to a
+     1.85:1 white-text ratio if reused as a banner background, which is why
+     it must never be used for that -- these two are calibrated instead. */
+  --lrcc-accent-solid: #0e7d78;
+  --lrcc-accent-solid-hover: #0a5f5b;
+
+  --lrcc-sidebar-bg: #14191c;
+  --lrcc-sidebar-bg-deep: #0e1214;
+  --lrcc-sidebar-fg: #c8d2d6;
+
+  --lrcc-body-bg: #1b2125;
+  --lrcc-wrap-bg: #171c1f;
+  --lrcc-text: #d7dee1;
+  --lrcc-text-muted: #97a3a8;
+  --lrcc-border: #2c3438;
+  --lrcc-code-bg: #232a2e;
+  --lrcc-code-fg: #ff8fb3;
+}
+
+/* --------------------------------------------------------------------------
+   2. Base surfaces
+   -------------------------------------------------------------------------- */
+
+body,
+.wy-body-for-nav {
+  background: var(--lrcc-wrap-bg);
+  color: var(--lrcc-text);
+}
+
+.wy-nav-content-wrap {
+  background: var(--lrcc-wrap-bg);
+}
+
+.wy-nav-content {
+  background: var(--lrcc-body-bg);
+  color: var(--lrcc-text);
+  /* Slightly wider than the RTD default: many pages carry launch files and
+     YAML blocks that read badly in a narrow column. */
+  max-width: 900px;
+}
+
+.rst-content {
+  color: var(--lrcc-text);
+}
+
+/* --------------------------------------------------------------------------
+   3. Sidebar navigation
+   -------------------------------------------------------------------------- */
+
+.wy-nav-side {
+  background: var(--lrcc-sidebar-bg);
+}
+
+.wy-side-nav-search {
+  background: var(--lrcc-accent-solid);
+}
+
+.wy-side-nav-search > a,
+.wy-side-nav-search .wy-dropdown > a {
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 1.1em;
+  line-height: 1.35;
+}
+
+.wy-side-nav-search > div.version {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.wy-side-nav-search input[type="text"] {
+  border-color: var(--lrcc-accent-dark);
+  border-radius: var(--lrcc-radius);
+}
+
+.wy-menu-vertical header,
+.wy-menu-vertical p.caption {
+  color: var(--lrcc-accent);
+  font-size: 0.82em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.wy-menu-vertical a {
+  color: var(--lrcc-sidebar-fg);
+}
+
+.wy-menu-vertical a:hover {
+  background-color: var(--lrcc-sidebar-bg-deep);
+  color: #ffffff;
+}
+
+/* The stock theme gives the expanded branch a near-white background, which is
+   unreadable against this sidebar in both light and dark mode. Keep the whole
+   branch dark and mark the current page by contrast instead. */
+.wy-menu-vertical li.current,
+.wy-menu-vertical li.toctree-l2.current,
+.wy-menu-vertical li.toctree-l3.current {
+  background: var(--lrcc-sidebar-bg-deep);
+}
+
+/* The rule above covers the <li> itself, but the stock theme separately
+   paints every *sibling* link inside an expanded current branch light gray
+   (`.wy-menu-vertical li.toctree-l2.current li.toctree-l3>a{background:#c9c9c9}`
+   and the equivalent one level deeper) -- specific enough to survive the
+   rule above and, combined with this sidebar's light link text, was
+   rendering those links at roughly 1.1:1 contrast, effectively invisible.
+   `:not(.current)` leaves the actual current link's own highlight (further
+   below) alone. */
+.wy-menu-vertical li.toctree-l2.current li.toctree-l3:not(.current) > a,
+.wy-menu-vertical li.toctree-l3.current li.toctree-l4:not(.current) > a {
+  background: var(--lrcc-sidebar-bg-deep);
+}
+
+.wy-menu-vertical li.current a,
+.wy-menu-vertical li.toctree-l2 a,
+.wy-menu-vertical li.toctree-l3 a,
+.wy-nav-side .wy-menu-vertical li.current a {
+  color: var(--lrcc-sidebar-fg);
+  border-right: none;
+  border-bottom: none;
+}
+
+/* The page you are actually on. */
+.wy-menu-vertical li.current > a,
+.wy-menu-vertical li.on a,
+.wy-menu-vertical li.toctree-l2.current > a,
+.wy-menu-vertical li.toctree-l3.current > a,
+/* Higher-specificity duplicates of the two rules above: a current l3/l4
+   item nested inside a current parent also matches the stock theme's
+   `li.toctree-l2.current li.toctree-l3>a{background:#c9c9c9}` rule (and
+   the l3/l4 equivalent), which is specific enough to beat the plain
+   selectors above and silently repaint the current link's own background
+   light gray -- the exact bug reported for the current-page highlight
+   itself, not only its siblings. */
+.wy-menu-vertical li.toctree-l2.current li.toctree-l3.current > a,
+.wy-menu-vertical li.toctree-l3.current li.toctree-l4.current > a {
+  background: var(--lrcc-accent-solid);
+  color: #ffffff;
+  border: none;
+  font-weight: 700;
+}
+
+/* ... but a parent that merely contains the current page is not itself
+   current, so it must not look like the active item. */
+.wy-menu-vertical li.current > a:not([href]),
+.wy-menu-vertical li.toctree-l1.current > a {
+  background: transparent;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.wy-menu-vertical li.current a:hover,
+.wy-menu-vertical li.toctree-l2 a:hover,
+.wy-menu-vertical li.toctree-l3 a:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.wy-menu-vertical li.toctree-l2.current > a:hover,
+.wy-menu-vertical li.toctree-l3.current > a:hover {
+  background: var(--lrcc-accent-solid-hover);
+  color: #ffffff;
+}
+
+.wy-nav-top {
+  background: var(--lrcc-accent-solid);
+}
+
+/* --------------------------------------------------------------------------
+   4. Typography and headings
+   -------------------------------------------------------------------------- */
+
+.rst-content h1,
+.rst-content h2,
+.rst-content h3,
+.rst-content h4,
+.rst-content h5,
+.rst-content h6 {
+  color: var(--lrcc-text);
+  font-weight: 700;
+}
+
+.rst-content h1 {
+  font-size: 2.05em;
+  border-bottom: 3px solid var(--lrcc-accent);
+  padding-bottom: 0.25em;
+  margin-bottom: 0.7em;
+}
+
+.rst-content h2 {
+  font-size: 1.55em;
+  margin-top: 1.9em;
+  border-bottom: 1px solid var(--lrcc-border);
+  padding-bottom: 0.2em;
+}
+
+.rst-content h3 {
+  font-size: 1.24em;
+  margin-top: 1.5em;
+  color: var(--lrcc-accent-dark);
+}
+
+.rst-content h4 {
+  font-size: 1.08em;
+  margin-top: 1.3em;
+}
+
+.rst-content a,
+.wy-nav-content a {
+  color: var(--lrcc-accent-dark);
+}
+
+.rst-content a:hover {
+  color: var(--lrcc-accent);
+  text-decoration: underline;
+}
+
+:root[data-theme="dark"] .rst-content a,
+:root[data-theme="dark"] .wy-nav-content a {
+  color: var(--lrcc-accent);
+}
+
+/* --------------------------------------------------------------------------
+   5. Breadcrumbs, footer, prev/next
+   -------------------------------------------------------------------------- */
+
+.wy-breadcrumbs {
+  font-size: 0.9em;
+}
+
+.wy-breadcrumbs li a {
+  color: var(--lrcc-text-muted);
+}
+
+.wy-breadcrumbs-aside {
+  display: none; /* "View page source" is disabled site-wide */
+}
+
+hr,
+.rst-content hr {
+  border-color: var(--lrcc-border);
+}
+
+.rst-footer-buttons {
+  margin-top: 2.2em;
+  padding-top: 1.2em;
+  border-top: 1px solid var(--lrcc-border);
+}
+
+.btn-neutral,
+.rst-content .btn-neutral {
+  background-color: var(--lrcc-code-bg) !important;
+  color: var(--lrcc-text) !important;
+  border-color: var(--lrcc-border);
+}
+
+.btn-neutral:hover,
+.rst-content .btn-neutral:hover {
+  background-color: var(--lrcc-accent-soft) !important;
+}
+
+footer,
+.rst-content footer,
+footer p,
+footer span {
+  color: var(--lrcc-text-muted);
+}
+
+/* --------------------------------------------------------------------------
+   6. Code blocks
+   -------------------------------------------------------------------------- */
+
+.rst-content div[class^="highlight"],
+.rst-content pre.literal-block {
+  background: var(--lrcc-code-bg);
+  border: 1px solid var(--lrcc-border);
+  border-radius: var(--lrcc-radius);
+  border-left: 3px solid var(--lrcc-accent);
+}
+
+.highlight {
+  background: var(--lrcc-code-bg);
+}
+
+.rst-content code.literal,
+.rst-content tt.literal {
+  background: var(--lrcc-code-bg);
+  border: 1px solid var(--lrcc-border);
+  border-radius: 3px;
+  color: var(--lrcc-code-fg);
+  padding: 0.1em 0.35em;
+  font-size: 0.87em;
+  /* Long literals (paths, topic names) wrap at natural break points (see the
+     <wbr> hints inserted by table-overflow.js) and only as a last resort
+     inside a word. "anywhere" is deliberately not used: it shrinks the
+     min-content width of table cells and stacks words vertically. */
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+/* Keep the copy button legible on the dark code surface. */
+:root[data-theme="dark"] button.copybtn {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+:root[data-theme="dark"] button.copybtn svg {
+  stroke: var(--lrcc-sidebar-fg);
+}
+
+/* Pygments token colours for dark mode. The stock light stylesheet stays in
+   place; these overrides only apply when the dark theme is active. */
+:root[data-theme="dark"] .highlight .c,
+:root[data-theme="dark"] .highlight .c1,
+:root[data-theme="dark"] .highlight .cm {
+  color: #7c8b91;
+  font-style: italic;
+}
+:root[data-theme="dark"] .highlight .k,
+:root[data-theme="dark"] .highlight .kn,
+:root[data-theme="dark"] .highlight .kd {
+  color: #6fc2ff;
+}
+:root[data-theme="dark"] .highlight .s,
+:root[data-theme="dark"] .highlight .s1,
+:root[data-theme="dark"] .highlight .s2,
+:root[data-theme="dark"] .highlight .sb {
+  color: #9ede7a;
+}
+:root[data-theme="dark"] .highlight .nb,
+:root[data-theme="dark"] .highlight .nf,
+:root[data-theme="dark"] .highlight .nn {
+  color: #ffcf6b;
+}
+:root[data-theme="dark"] .highlight .mi,
+:root[data-theme="dark"] .highlight .mf {
+  color: #ff9d7a;
+}
+:root[data-theme="dark"] .highlight,
+:root[data-theme="dark"] .highlight pre {
+  color: var(--lrcc-text);
+}
+:root[data-theme="dark"] .highlight .gp {
+  color: var(--lrcc-accent);
+}
+
+/* --------------------------------------------------------------------------
+   7. Tables
+   -------------------------------------------------------------------------- */
+
+.rst-content table.docutils {
+  border-color: var(--lrcc-border);
+}
+
+.rst-content table.docutils td,
+.rst-content table.docutils th {
+  border-color: var(--lrcc-border);
+  background: transparent;
+  color: var(--lrcc-text);
+  vertical-align: top;
+}
+
+.rst-content table.docutils thead th {
+  background: var(--lrcc-accent-soft);
+  color: var(--lrcc-text);
+}
+
+.wy-table-odd td,
+.wy-table-striped tr:nth-child(2n-1) td,
+.rst-content table.docutils:not(.field-list) tr:nth-child(2n-1) td {
+  background-color: rgba(127, 127, 127, 0.06);
+}
+
+/* Wide tables scroll inside their own region instead of breaking the page. */
+.wy-table-responsive {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-gutter: stable;
+}
+
+.wy-table-responsive:focus-visible {
+  outline: 2px solid var(--lrcc-accent);
+  outline-offset: 2px;
+}
+
+/* Compact tables always fit the column and wrap their text. */
+.rst-content table.compact-two-column,
+.rst-content table.compact-three-column,
+.rst-content table.interface-record-table,
+.rst-content table.status-record-table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.rst-content table.compact-two-column td,
+.rst-content table.compact-three-column td,
+.rst-content table.interface-record-table td,
+.rst-content table.status-record-table td,
+.rst-content table.compact-two-column th,
+.rst-content table.compact-three-column th,
+.rst-content table.interface-record-table th,
+.rst-content table.status-record-table th {
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+
+.rst-content table.compact-two-column td p,
+.rst-content table.compact-three-column td p,
+.rst-content table.interface-record-table td p,
+.rst-content table.status-record-table td p {
+  margin-bottom: 4px;
+}
+
+/* Label column of record tables: a bold, readable key. */
+.rst-content table.interface-record-table td:first-child,
+.rst-content table.status-record-table td:first-child {
+  font-weight: 600;
+  width: 30%;
+}
+
+/* Reference tables that are genuinely wide keep their columns and scroll. */
+.rst-content table.wide-reference-table {
+  width: auto;
+  min-width: 640px;
+}
+
+.table-scroll-hint {
+  margin: 0 0 4px;
+  font-size: 0.85rem;
+  color: var(--lrcc-text-muted, var(--lrcc-text));
+}
+
+/* Badges inside table cells wrap instead of overflowing the cell. */
+.rst-content table .lrcc-badge,
+.rst-content table .lrcc-level {
+  white-space: normal;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 600px) {
+  /* Give the label column enough width to stay readable on a phone. */
+  .rst-content table.compact-two-column col:first-child,
+  .rst-content table.interface-record-table col:first-child,
+  .rst-content table.status-record-table col:first-child {
+    width: 42% !important;
+  }
+
+  .rst-content table.compact-two-column col:nth-child(2),
+  .rst-content table.interface-record-table col:nth-child(2),
+  .rst-content table.status-record-table col:nth-child(2) {
+    width: 58% !important;
+  }
+
+  .rst-content table.compact-three-column td,
+  .rst-content table.compact-three-column th {
+    padding: 6px 6px;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   8. Admonitions: note / warning / task / solution / review
+   -------------------------------------------------------------------------- */
+
+.rst-content .admonition,
+.rst-content .admonition-todo {
+  background: var(--lrcc-code-bg);
+  border-radius: var(--lrcc-radius);
+  border: 1px solid var(--lrcc-border);
+  border-left-width: 4px;
+  color: var(--lrcc-text);
+}
+
+.rst-content .admonition > .admonition-title,
+.rst-content .admonition > p.admonition-title {
+  border-radius: 0;
+  font-weight: 700;
+}
+
+.rst-content .note,
+.rst-content .seealso {
+  border-left-color: var(--lrcc-note);
+}
+.rst-content .note > .admonition-title,
+.rst-content .seealso > .admonition-title {
+  background: var(--lrcc-note);
+}
+
+.rst-content .tip,
+.rst-content .hint,
+.rst-content .important {
+  border-left-color: var(--lrcc-tip);
+}
+.rst-content .tip > .admonition-title,
+.rst-content .hint > .admonition-title,
+.rst-content .important > .admonition-title {
+  background: var(--lrcc-tip);
+}
+
+.rst-content .warning,
+.rst-content .caution,
+.rst-content .attention {
+  border-left-color: var(--lrcc-warning);
+}
+.rst-content .warning > .admonition-title,
+.rst-content .caution > .admonition-title,
+.rst-content .attention > .admonition-title {
+  background: var(--lrcc-warning);
+}
+
+.rst-content .danger,
+.rst-content .error {
+  border-left-color: var(--lrcc-danger);
+}
+
+/* Task blocks -- the practical exercise on every course page. */
+.rst-content .admonition.task {
+  border-left-color: var(--lrcc-task);
+  background: var(--lrcc-accent-soft);
+}
+.rst-content .admonition.task > .admonition-title {
+  background: var(--lrcc-task);
+  color: #ffffff;
+}
+
+/* Expected-result blocks. */
+.rst-content .admonition.result {
+  border-left-color: var(--lrcc-tip);
+}
+.rst-content .admonition.result > .admonition-title {
+  background: var(--lrcc-tip);
+  color: #ffffff;
+}
+
+/* Review markers for content that still needs a domain expert. */
+.rst-content .admonition.todo-review {
+  border-left-color: var(--lrcc-review);
+}
+.rst-content .admonition.todo-review > .admonition-title {
+  background: var(--lrcc-review);
+  color: #ffffff;
+}
+
+/* Collapsible `sphinx-design` dropdowns -- solution blocks, and every
+   "Advanced topics" / "Continue learning" deep-dive on the site. Every rule
+   below is keyed off the theme-aware tokens above, deliberately, so that
+   the closed state, the open state, and everything nested inside it (text,
+   links, code, lists, admonitions) stay readable in both themes -- see
+   scripts/verify-site.py's dropdown-contrast check. */
+.rst-content details.sd-dropdown {
+  border: 1px solid var(--lrcc-border);
+  border-left: 4px solid var(--lrcc-tip);
+  border-radius: var(--lrcc-radius);
+  background: var(--lrcc-code-bg);
+  color: var(--lrcc-text);
+  margin-bottom: 1.2em;
+}
+
+.rst-content details.sd-dropdown summary.sd-summary-title {
+  background: transparent;
+  color: var(--lrcc-text);
+  font-weight: 700;
+}
+
+.rst-content details.sd-dropdown summary.sd-summary-title:hover {
+  background: var(--lrcc-accent-soft);
+}
+
+/* sphinx-design removes the default outline on the summary entirely (in
+   both themes); restore one on focus. Plain `:focus` rather than
+   `:focus-visible` is deliberate -- Chromium's focus-visible heuristic can
+   suppress the ring after a preceding click even for a later, genuine Tab
+   press, which would make keyboard focus invisible in exactly the cases
+   that matter. Showing the ring on every focus, mouse included, is a small
+   trade for that not happening. */
+.rst-content details.sd-dropdown summary.sd-summary-title:focus {
+  outline: 2px solid var(--lrcc-accent-solid);
+  outline-offset: -2px;
+}
+
+/* The open dropdown's body -- explicit for every element sphinx-design
+   itself leaves unstyled (it only ships `color: inherit` / `transparent`),
+   so nothing here silently falls back to a browser or theme default. */
+.rst-content details.sd-dropdown[open] {
+  background: var(--lrcc-code-bg);
+}
+
+.rst-content details.sd-dropdown .sd-summary-content,
+.rst-content details.sd-dropdown .sd-summary-content p:not(.admonition-title),
+.rst-content details.sd-dropdown .sd-summary-content li {
+  color: var(--lrcc-text);
+}
+
+.rst-content details.sd-dropdown .sd-summary-content a {
+  color: var(--lrcc-accent-dark);
+}
+
+:root[data-theme="dark"] .rst-content details.sd-dropdown .sd-summary-content a {
+  color: var(--lrcc-accent);
+}
+
+.rst-content details.sd-dropdown .sd-summary-content code {
+  background: var(--lrcc-body-bg);
+  color: var(--lrcc-code-fg);
+}
+
+/* --------------------------------------------------------------------------
+   9. Platform / version badges
+   -------------------------------------------------------------------------- */
+
+.lrcc-badge {
+  display: inline-block;
+  padding: 0.12em 0.55em;
+  margin: 0 0.15em 0.15em 0;
+  border-radius: 3px;
+  font-size: 0.72em;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  line-height: 1.7;
+  vertical-align: middle;
+  white-space: nowrap;
+  color: #ffffff;
+  font-family: "Roboto Slab", "ff-tisa-web-pro", Georgia, Arial, sans-serif;
+}
+
+.lrcc-badge--simulation { background: #246293; }
+.lrcc-badge--alert { background: #7a4bb5; }
+.lrcc-badge--unverified { background: #a02b47; }
+.lrcc-badge--documented { background: #0f6e5c; }
+.lrcc-badge--hwverified { background: #3d4f9e; }
+.lrcc-badge--hwverification-required { background: #a3521a; }
+.lrcc-badge--experimental { background: #8a3d7a; }
+.lrcc-badge--historical { background: #43484f; }
+
+/* A row of badges directly under a heading gets a little breathing room. */
+.rst-content p > .lrcc-badge:first-child {
+  margin-top: 0.2em;
+}
+
+/* --------------------------------------------------------------------------
+   10. Landing-page cards (sphinx-design grids)
+   -------------------------------------------------------------------------- */
+
+.rst-content .sd-card {
+  background: var(--lrcc-body-bg);
+  border: 1px solid var(--lrcc-border);
+  border-radius: var(--lrcc-radius);
+  transition: border-color 0.15s ease-in-out, transform 0.15s ease-in-out;
+}
+
+.rst-content .sd-card:hover {
+  border-color: var(--lrcc-accent);
+  transform: translateY(-2px);
+}
+
+.rst-content .sd-card .sd-card-title {
+  color: var(--lrcc-accent-dark);
+  font-weight: 700;
+}
+
+:root[data-theme="dark"] .rst-content .sd-card .sd-card-title {
+  color: var(--lrcc-accent);
+}
+
+.rst-content .sd-card-body {
+  color: var(--lrcc-text);
+}
+
+/* The prominent "Start the Course" entry point on the landing page. */
+.lrcc-cta {
+  display: inline-block;
+  margin: 0.6em 0 1.4em 0;
+  padding: 0.7em 1.6em;
+  background: var(--lrcc-accent-solid);
+  color: #ffffff !important;
+  font-weight: 700;
+  font-size: 1.05em;
+  border-radius: var(--lrcc-radius);
+  text-decoration: none !important;
+  transition: background 0.15s ease-in-out;
+}
+
+.lrcc-cta:hover {
+  background: var(--lrcc-accent-solid-hover);
+  color: #ffffff !important;
+}
+
+/* --------------------------------------------------------------------------
+   11. Theme switcher button
+   -------------------------------------------------------------------------- */
+
+.lrcc-theme-switcher {
+  position: fixed;
+  right: 1.4rem;
+  bottom: 1.4rem;
+  z-index: 400;
+  width: 2.8rem;
+  height: 2.8rem;
+  border: 1px solid var(--lrcc-border);
+  border-radius: 50%;
+  background: var(--lrcc-body-bg);
+  color: var(--lrcc-text);
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.28);
+  transition: background 0.15s ease-in-out, color 0.15s ease-in-out;
+}
+
+.lrcc-theme-switcher:hover {
+  background: var(--lrcc-accent-solid);
+  color: #ffffff;
+}
+
+.lrcc-theme-switcher:focus-visible {
+  outline: 2px solid var(--lrcc-accent);
+  outline-offset: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   11b. StatiCrypt "Log out" button
+   -------------------------------------------------------------------------- */
+
+/* Stacked directly above the theme switcher, same corner -- only ever
+   present in the DOM at all when a remembered password actually exists
+   (see js/staticrypt-logout.js), so there is nothing to position around
+   on a build where the gate was never unlocked with "remember me". */
+.lrcc-staticrypt-logout {
+  position: fixed;
+  right: 1.4rem;
+  bottom: 4.6rem;
+  z-index: 400;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--lrcc-border);
+  border-radius: 999px;
+  background: var(--lrcc-body-bg);
+  color: var(--lrcc-text);
+  font-size: 0.85rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.28);
+  transition: background 0.15s ease-in-out, color 0.15s ease-in-out;
+}
+
+.lrcc-staticrypt-logout:hover {
+  background: var(--lrcc-accent-solid);
+  color: #ffffff;
+}
+
+.lrcc-staticrypt-logout:focus-visible {
+  outline: 2px solid var(--lrcc-accent);
+  outline-offset: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   12. Original course diagrams
+   -------------------------------------------------------------------------- */
+
+/* Every diagram is a hand-authored SVG in _static/images/diagrams/, designed
+   with a light, neutral card background and dark text so it stays legible
+   with no changes needed whether the surrounding page is in light or dark
+   mode. The frame below is what actually adapts to the theme: a visible
+   border and shadow in light mode, a slightly stronger one in dark mode so
+   the light card does not look like a stray white rectangle on a dark page. */
+
+.rst-content .figure,
+.rst-content figure {
+  margin: 1.6em auto;
+  text-align: center;
+  max-width: 100%;
+}
+
+.rst-content .figure img,
+.rst-content figure img {
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+  height: auto;
+  background: #fbfcfc;
+  border: 1px solid var(--lrcc-border);
+  border-radius: var(--lrcc-radius);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+}
+
+:root[data-theme="dark"] .rst-content .figure img,
+:root[data-theme="dark"] .rst-content figure img {
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.55);
+}
+
+.rst-content .figure .caption,
+.rst-content figure figcaption,
+.rst-content p.caption {
+  color: var(--lrcc-text-muted);
+  font-size: 0.88em;
+  margin-top: 0.6em;
+  text-align: center;
+}
+
+/* --------------------------------------------------------------------------
+   13. Content level badges (Core / Optional / Advanced / Platform-specific)
+   -------------------------------------------------------------------------- */
+
+.lrcc-level {
+  display: inline-block;
+  padding: 0.14em 0.6em;
+  margin: 0 0.3em 0.3em 0;
+  border-radius: 3px;
+  font-size: 0.74em;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  vertical-align: middle;
+  white-space: nowrap;
+  color: #ffffff;
+}
+
+.lrcc-level--foundation { background: #19703c; }
+.lrcc-level--intermediate { background: #246293; }
+.lrcc-level--advanced { background: #7a4bb5; }
+.lrcc-level--research { background: #6b2545; }
+
+/* Exercise safety levels. */
+.lrcc-level--safety-sim { background: #246293; }
+.lrcc-level--safety-readonly { background: #8a5a12; }
+.lrcc-level--safety-supervised { background: #a3272c; }
+
+/* --------------------------------------------------------------------------
+   14. Responsive behaviour
+   -------------------------------------------------------------------------- */
+
+@media screen and (max-width: 768px) {
+  .wy-nav-content {
+    max-width: 100%;
+    padding: 1.2rem 1rem 2.4rem 1rem;
+  }
+
+  .rst-content h1 {
+    font-size: 1.65em;
+  }
+
+  .rst-content h2 {
+    font-size: 1.32em;
+  }
+
+  /* Never let a wide element push the page sideways. */
+  .rst-content table.docutils,
+  .rst-content div[class^="highlight"] {
+    max-width: 100%;
+  }
+
+  .rst-content div[class^="highlight"] pre {
+    overflow-x: auto;
+  }
+
+  .lrcc-theme-switcher {
+    right: 0.9rem;
+    bottom: 0.9rem;
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+
+  .lrcc-staticrypt-logout {
+    right: 0.9rem;
+    bottom: 3.9rem;
+    padding: 0.4rem 0.7rem;
+    font-size: 0.78rem;
+  }
+}
+
+@media print {
+  /* The RTD theme's own print stylesheet (theme.css) resets shadows and
+     page-break rules but never accounts for the sidebar nav itself -- left
+     as-is, it prints in full and the content column keeps its 300px
+     left margin reserved for it, so the page prints as a narrow column of
+     text jammed against a large blank gutter (or, on some browsers, the
+     nav literally overlapping the content). This is most noticeable on
+     pages meant to be printed and taken into the field, like the Operator
+     Checklist. */
+  .lrcc-theme-switcher,
+  .lrcc-staticrypt-logout,
+  .wy-nav-side,
+  .wy-nav-top,
+  .wy-breadcrumbs,
+  .rst-footer-buttons,
+  .rst-versions {
+    display: none !important;
+  }
+
+  .wy-nav-content-wrap {
+    margin-left: 0 !important;
+  }
+
+  .wy-nav-content {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+}
+
+/* Mermaid diagrams: before rendering, the raw diagram text must not widen
+   the page; after rendering the SVG scales to the column. */
+.rst-content .mermaid:not([data-processed="true"]) {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.rst-content .mermaid svg {
+  max-width: 100%;
+  height: auto;
+}
